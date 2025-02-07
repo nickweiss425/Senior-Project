@@ -1,6 +1,9 @@
 #include <iostream>
 #include <cmath>
 #include <vector>
+#include <fstream>
+
+#include "write_csv.h"
 
 /* Constant system parameters defined by paper under Materials/Methods */
 const double tau1 = 49.00;      // pharmacokinetic time constants (min)
@@ -13,8 +16,8 @@ const double EGP = 1.33;        // endogenous glucose production (mg/dL/min)
 const double taum = 40.50;      // the peak time of meal glucose appearance (min)
 const double VG = 253.00;       // glucose distribution volume (dL)
 
-const double time_step = 10e-3; // time step of 10^-3 min for RK4 method
-int sim_time = 1440;            // simulation time of 300 minutes
+const double time_step = 1.00 / (1000); // time step of 10^-3 min for RK4 method
+int sim_time = 1440;            // simulation time of 1440 minutes
 
 
 /* --------- Meal Schedule (in minutes)---------*/
@@ -72,10 +75,12 @@ void update_temp_state (struct PatientState *base_state, struct PatientState *fi
     fill_state -> G = base_state -> G + ((time_step) * k[3]);
 }
 
+
+// update all patient parameters for the next step in time
 void update_patient_state_rk4(struct PatientState *patient, double insulin_infusion, double CH, double meal_timer){
     // simulate meal
     double RA = meal_intake(CH, meal_timer);
-
+    std::cout << "RA: " << RA << std::endl;
     // need 4 arrays of 4 components
     // each index in the array corresponds with one of the differential equations
     double k1[4], k2[4], k3[4], k4[4];
@@ -105,11 +110,33 @@ void update_patient_state_rk4(struct PatientState *patient, double insulin_infus
     patient -> G = (patient -> G) + ((time_step / 6) * (k1[3] + (2 * k2[3]) + (2 * k3[3]) + k4[3])); 
 }
 
+double adjust_insulin(double G, double target_G, double current_insulin) {
+    const double Kp = 0.001;  // Proportional gain (μU per mg/dL error)
+    double error = G - target_G;  // Difference from target glucose
 
-int main(){
+    // Proportional control: Increase/decrease insulin based on glucose level
+    double insulin_infusion = current_insulin + (Kp * error);
+
+    // Ensure insulin stays within safe limits (μU/min)
+    if (insulin_infusion < 0) insulin_infusion = 0;        // No negative insulin
+    if (insulin_infusion > 30000) insulin_infusion = 30000;  // Upper safety limit
+
+    return insulin_infusion; 
+}
+
+int main(int argc, char *argv[]){
+
+    // setup csv file to hold data
+    std::string filename = "glucose_data.csv";
+    if (argc > 1){
+        std::string filename = argv[1];
+    }
+    // write the column names to file
+    writeHeaders(filename);
+
     struct PatientState patient = {0, 0, 0, 100};    // initialize patient, with 100 mg/dL
 
-    double insulin_infusion = 16667 ; // exmaple insulin infusion
+    double insulin_infusion = 0 ; // exmaple insulin infusion
     double meal_timer = 0;
     bool meal_active = false;
 
@@ -122,17 +149,19 @@ int main(){
         if (std::fabs(time - breakfast_time) < time_step / 2){
             std::cout << "BREAKFAST TIME" << std::endl;
             meal_active = true;
-            CH = breakfast_carbs;
+            // carbohydrates in mg
+            CH = breakfast_carbs * 1000;
         }
         else if (std::fabs(time - lunch_time) < time_step / 2){
             std::cout << "LUNCH TIME" << std::endl;
             meal_active = true;
-            CH = lunch_carbs;
+            // carbohydrates in mg
+            CH = lunch_carbs * 1000;
         }
         else if (std::fabs(time - dinner_time) < time_step / 2){
             std::cout << "DINNER TIME" << std::endl;
             meal_active = true;
-            CH = dinner_carbs;
+            CH = dinner_carbs * 1000;
         }
 
 
@@ -144,6 +173,8 @@ int main(){
             num_calculated = 0;
         }
 
+        appendData(filename, time, patient.G, insulin_infusion);
+
 
         // if meal is active, increment timer by set time step
         if (meal_active){
@@ -154,9 +185,22 @@ int main(){
         if (meal_active && meal_timer >= meal_duration){
             meal_active = false;
             meal_timer = 0;
+            CH = 0;
         }
+
+
+        insulin_infusion = adjust_insulin(patient.G, 110, insulin_infusion);
+
 
     }
 
+    std::string command = "python3 plot_data.py " + filename;
+    system(command.c_str());
+
+
+
 }
+
+
+
 
