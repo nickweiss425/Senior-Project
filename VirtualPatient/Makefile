@@ -11,7 +11,7 @@ CXXFLAGS = -std=c++11 -Wall -O2
 TARGET = ivp
 
 # The object file (compiled from ivp.cpp)
-OBJS = ivp.o
+OBJS = ivp.o write_csv.o
 
 # Default rule: build the target executable
 $(TARGET): $(OBJS)
@@ -20,6 +20,10 @@ $(TARGET): $(OBJS)
 # Rule to compile ivp.cpp into ivp.o
 ivp.o: ivp.cpp
 	$(CXX) $(CXXFLAGS) -c ivp.cpp
+
+write_csv.o: write_csv.cpp
+	$(CXX) $(CXXFLAGS) -c write_csv.cpp
+
 
 # Clean rule: remove the executable and object files
 clean:
