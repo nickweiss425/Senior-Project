@@ -3,7 +3,7 @@
 #include <vector>
 #include <fstream>
 
-#include "write_csv.h"
+#include "ivp.h"
 
 /* Constant system parameters defined by paper under Materials/Methods */
 const double tau1 = 49.00;      // pharmacokinetic time constants (min)
@@ -15,32 +15,7 @@ const double GEZI = 2.20e-3;    // Glucose effectiveness at zero insulin (min^-1
 const double EGP = 1.33;        // endogenous glucose production (mg/dL/min)
 const double taum = 40.50;      // the peak time of meal glucose appearance (min)
 const double VG = 253.00;       // glucose distribution volume (dL)
-
 const double time_step = 1.00 / (1000); // time step of 10^-3 min for RK4 method
-int sim_time = 1440;            // simulation time of 1440 minutes
-
-
-/* --------- Meal Schedule (in minutes)---------*/
-/* Breakfast: 7:30, Lunch: 12:30, Dinner: 19:30 */
-
-const double meal_duration = 180.00;         // after ~3 hours carbs absorption will be finished
-
-const double breakfast_time = 7.5 * 60;
-const double breakfast_carbs = 42.00;
-
-const double lunch_time = 12.5 * 60;
-const double lunch_carbs = 66.00;
-
-const double dinner_time = 19.5 * 60;
-const double dinner_carbs = 51.00;
-
-
-struct PatientState {
-    double ISC;                 // subcutaneous insulin concentration (μU/mL)
-    double I;                   // plasma insulin concentration (μU/mL)
-    double IEFF;                // insulin effect on blood glucose (min^-1)
-    double G;                   // blood glucose concentration (mg/dL)
-};
 
 
 // helper function to return RA, the rate of glucose appearance (mg/dL/min)
@@ -80,7 +55,7 @@ void update_temp_state (struct PatientState *base_state, struct PatientState *fi
 void update_patient_state_rk4(struct PatientState *patient, double insulin_infusion, double CH, double meal_timer){
     // simulate meal
     double RA = meal_intake(CH, meal_timer);
-    std::cout << "RA: " << RA << std::endl;
+    
     // need 4 arrays of 4 components
     // each index in the array corresponds with one of the differential equations
     double k1[4], k2[4], k3[4], k4[4];
@@ -124,82 +99,6 @@ double adjust_insulin(double G, double target_G, double current_insulin) {
     return insulin_infusion; 
 }
 
-int main(int argc, char *argv[]){
-
-    // setup csv file to hold data
-    std::string filename = "glucose_data.csv";
-    if (argc > 1){
-        std::string filename = argv[1];
-    }
-    // write the column names to file
-    writeHeaders(filename);
-
-    struct PatientState patient = {0, 0, 0, 100};    // initialize patient, with 100 mg/dL
-
-    double insulin_infusion = 0 ; // exmaple insulin infusion
-    double meal_timer = 0;
-    bool meal_active = false;
-
-    double CH = 0;
-
-    int num_calculated = 0;
-    for (double time = 0; time < sim_time; time += time_step){
-
-        // check to see if it is time for a meal
-        if (std::fabs(time - breakfast_time) < time_step / 2){
-            std::cout << "BREAKFAST TIME" << std::endl;
-            meal_active = true;
-            // carbohydrates in mg
-            CH = breakfast_carbs * 1000;
-        }
-        else if (std::fabs(time - lunch_time) < time_step / 2){
-            std::cout << "LUNCH TIME" << std::endl;
-            meal_active = true;
-            // carbohydrates in mg
-            CH = lunch_carbs * 1000;
-        }
-        else if (std::fabs(time - dinner_time) < time_step / 2){
-            std::cout << "DINNER TIME" << std::endl;
-            meal_active = true;
-            CH = dinner_carbs * 1000;
-        }
-
-
-
-        update_patient_state_rk4(&patient, insulin_infusion, CH, meal_timer);
-        num_calculated++;
-        if (num_calculated == 100) { // Print every 1 minute
-            std::cout << "Time: " << time << " min, Glucose Level: " << patient.G << " mg/dL" << std::endl;
-            num_calculated = 0;
-        }
-
-        appendData(filename, time, patient.G, insulin_infusion);
-
-
-        // if meal is active, increment timer by set time step
-        if (meal_active){
-            meal_timer += time_step;
-        }
-
-        // when meal duration has passed, reset flag and timer
-        if (meal_active && meal_timer >= meal_duration){
-            meal_active = false;
-            meal_timer = 0;
-            CH = 0;
-        }
-
-
-        insulin_infusion = adjust_insulin(patient.G, 110, insulin_infusion);
-
-
-    }
-
-    std::string command = "python3 plot_data.py " + filename;
-    system(command.c_str());
-
-
-
-}
 
 
 
