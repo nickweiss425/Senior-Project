@@ -23,7 +23,7 @@ def plot_data(filename):
     plt.figure(figsize=(10, 5))
     plt.plot(df['Time'], df['Insulin Infusion'], color='b', label='Insulin Infusion', linewidth=1.5)  # Thinner lines without markers
     plt.xlabel('Time (minutes)')
-    plt.ylabel('Insulin Infusion Rate (units/hr)')
+    plt.ylabel('Insulin Infusion Rate (μU / min)')
     plt.title('Time vs. Insulin Infusion Rate')
     plt.grid(True)
     plt.legend()
