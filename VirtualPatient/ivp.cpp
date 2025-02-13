@@ -80,7 +80,6 @@ void update_temp_state (struct PatientState *base_state, struct PatientState *fi
 void update_patient_state_rk4(struct PatientState *patient, double insulin_infusion, double CH, double meal_timer){
     // simulate meal
     double RA = meal_intake(CH, meal_timer);
-    std::cout << "RA: " << RA << std::endl;
     // need 4 arrays of 4 components
     // each index in the array corresponds with one of the differential equations
     double k1[4], k2[4], k3[4], k4[4];
