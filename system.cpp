@@ -8,7 +8,7 @@
 #include "rbf.h"
 
 
-const double time_step = 1.00 / (1000); // time step of 10^-3 min for RK4 method
+// const double time_step = 1.00 / (1000); // time step of 10^-3 min for RK4 method
 int sim_time = 10080;            // simulation time of 1440 minutes
 
 /* --------- Meal Schedule (in minutes)---------*/
