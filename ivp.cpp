@@ -14,7 +14,7 @@ const double SI = 8.11e-4;      // insulin sensitivity (mL / μU / min)
 const double GEZI = 2.20e-3;    // Glucose effectiveness at zero insulin (min^-1)
 const double EGP = 1.33;        // endogenous glucose production (mg/dL/min)
 const double taum = 40.50;      // the peak time of meal glucose appearance (min)
-const double VG = 253.00;       // glucose distribution volume (dL)
+const double VG = 253.00;       // glucose          ribution volume (dL)
 const double time_step = 1.00 / (1000); // time step of 10^-3 min for RK4 method
 
 
